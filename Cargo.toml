@@ -1,0 +1,9 @@
+[package]
+name = "contract-sdk"
+version = "0.1.0"
+authors = ["developers@centrality.ai"]
+edition = "2018"
+
+[dependencies]
+parity-codec = { version = "2.0.2", default-features = false }
+primitives = { package = "primitive-types", version = "0.1", default-features = false, features = ["codec"] }
