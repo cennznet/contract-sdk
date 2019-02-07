@@ -1,6 +1,6 @@
 //!
 //! An index of CENNZnet reference types and constants
-//! 
+//!
 
 /// Mappings to CENNZnet runtime types
 pub mod types {

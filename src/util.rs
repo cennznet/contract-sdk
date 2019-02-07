@@ -1,6 +1,6 @@
-//! 
+//!
 //! Misc. helper functions
-//! 
+//!
 use crate::alloc::vec::Vec;
 
 /// Convert a `u32` into a `Vec<u8>`
