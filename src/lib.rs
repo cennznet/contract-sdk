@@ -9,6 +9,7 @@
 extern crate alloc;
 
 pub mod index;
+pub mod util;
 
 use alloc::vec::Vec;
 use index::types::*;
