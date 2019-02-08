@@ -6,20 +6,20 @@ use alloc::vec::Vec;
 use parity_codec::{Decode, Encode};
 
 /// An interface for contract runtime functionality
-trait RuntimeABI {
+pub trait RuntimeABI {
     /// Transfer `asset_id`@`amount` from this contract's account to a given destination `account`
     fn generic_asset_transfer(account: AccountId, asset_id: AssetId, amount: Balance);
     /// Get some value stored at `key` from storage
     fn get_storage(key: &StorageKey) -> Option<Vec<u8>>;
     /// Returns a data buffer to the caller, terminates immediatley.
-    fn return_(data: &[u8]) -> !;
+    fn return_with(data: &[u8]) -> !;
     /// Store some `value` at `key` in storage
     fn set_storage(key: &StorageKey, value: Option<&[u8]>);
 }
 
 /// An interface over read-only runtime data
 /// Note: these calls still incur gas costs, but provide a nicer API presented as a `context`
-trait ExecutionContext {
+pub trait ExecutionContext {
     /// Get the remaining gas balance for contract execution
     fn gas() -> Result<Balance, &'static str>;
     /// Get the input buffer (payload) from the caller
@@ -32,13 +32,6 @@ trait ExecutionContext {
 
 /// Provides contextual data of a contract's execution environment
 pub struct Context;
-
-impl Context {
-    /// Return a default `Context`
-    pub fn default() -> Self {
-        Context {}
-    }
-}
 
 impl ExecutionContext for Context {
     /// Get the current block timestamp
@@ -84,21 +77,9 @@ impl ExecutionContext for Context {
 }
 
 /// The default RuntimeAPI implementation
-pub struct Runtime {
-    pub ctx: Context,
-}
-
-impl Runtime {
-    /// Return a default `Runtime`
-    pub fn default() -> Self {
-        Runtime {
-            ctx: Context::default()
-        }
-    }
-}
+pub struct Runtime;
 
 impl RuntimeABI for Runtime {
-
     /// Transfer `asset_id`@`amount` from this contract's account to a given destination `account`
     fn generic_asset_transfer(account: AccountId, asset_id: AssetId, amount: Balance) {
         let account_buf = AccountId::encode(&account);
@@ -142,7 +123,7 @@ impl RuntimeABI for Runtime {
     }
 
     /// Return the given `data` buffer to the caller
-    fn return_(data: &[u8]) -> ! {
+    fn return_with(data: &[u8]) -> ! {
         unsafe {
             cabi::ext_return(data.as_ptr() as u32, data.len() as u32);
         }
