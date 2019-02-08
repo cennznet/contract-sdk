@@ -14,11 +14,6 @@ pub use crate::index::types;
 pub mod runtime;
 pub mod util;
 
-// Use `wee_alloc` as the wasm memory manager
-use wee_alloc;
-#[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc<'_> = wee_alloc::WeeAlloc::INIT;
-
 /// Useful default imports for writing smart contracts
 /// `use contract_sdk::prelude::*`
 pub mod prelude {

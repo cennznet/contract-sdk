@@ -1,0 +1,11 @@
+[package]
+name = "contract-bootstrap"
+version = "0.1.0"
+authors = ["developers@centrality.ai"]
+edition = "2018"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+wee_alloc = "0.4"
