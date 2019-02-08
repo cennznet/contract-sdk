@@ -20,6 +20,8 @@ pub trait RuntimeABI {
 /// An interface over read-only runtime data
 /// Note: these calls still incur gas costs, but provide a nicer API presented as a `context`
 pub trait ExecutionContext {
+    /// Get the caller's account address
+    fn caller() -> Result<AccountId, &'static str>;
     /// Get the remaining gas balance for contract execution
     fn gas() -> Result<Balance, &'static str>;
     /// Get the input buffer (payload) from the caller
@@ -40,6 +42,15 @@ impl ExecutionContext for Context {
             cabi::ext_now();
             let timestamp_buf = read_scratch_buffer();
             u64::decode(&mut &timestamp_buf[..]).ok_or("Failed to load timestamp value")
+        }
+    }
+
+    /// Get the address of the contract caller
+    fn caller() -> Result<AccountId, &'static str> {
+        unsafe {
+            cabi::ext_caller();
+            let caller_buf = read_scratch_buffer();
+            AccountId::decode(&mut &caller_buf[..]).ok_or("Failed to load caller value")
         }
     }
 
@@ -147,6 +158,7 @@ fn read_scratch_buffer() -> Vec<u8> {
 /// Bindings to the Substrate contract runtime
 mod cabi {
     extern "C" {
+        pub fn ext_caller();
         pub fn ext_gas_left();
         pub fn ext_ga_transfer(asset_id: u32, account_ptr: u32, account_len: u32, value: u64);
         pub fn ext_now();
