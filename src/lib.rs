@@ -4,8 +4,6 @@
 //!
 #![no_std]
 #![feature(alloc)]
-#![feature(alloc_error_handler)]
-#![feature(core_intrinsics)]
 
 #[macro_use]
 extern crate alloc;
@@ -31,16 +29,4 @@ pub mod prelude {
     pub use crate::runtime::Runtime;
     pub use crate::runtime::RuntimeABI;
     pub use alloc::vec::Vec;
-
-    // Stub some error handling functions needed when in a #[no_std] env
-    #[panic_handler]
-    #[no_mangle]
-    pub fn panic(_info: &::core::panic::PanicInfo<'_>) -> ! {
-        unsafe { ::core::intrinsics::abort() }
-    }
-
-    #[alloc_error_handler]
-    pub fn oom(_: ::core::alloc::Layout) -> ! {
-        unsafe { ::core::intrinsics::abort() }
-    }
 }
