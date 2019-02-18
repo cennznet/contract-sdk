@@ -9,6 +9,8 @@ use parity_codec::{Decode, Encode};
 pub trait RuntimeABI {
     /// Transfer `asset_id`@`amount` from this contract's account to a given destination `account`
     fn generic_asset_transfer(account: AccountId, asset_id: AssetId, amount: Balance);
+    /// Log an event message to the chain
+    fn log(message: &str);
     /// Returns a data buffer to the caller, terminates immediatley.
     fn return_with(data: &[u8]) -> !;
 }
@@ -101,6 +103,13 @@ impl RuntimeABI for Runtime {
         }
     }
 
+   /// Log an event to chain with the given `message`
+   fn log(message: &[u8]) {
+       unsafe {
+           cabi::ext_log(message.as_ptr() as u32, message.len() as u32);
+       }
+   }
+
     /// Return the given `data` buffer to the caller
     fn return_with(data: &[u8]) -> ! {
         unsafe {
@@ -129,6 +138,7 @@ pub(crate) mod cabi {
         pub fn ext_caller();
         pub fn ext_gas_left();
         pub fn ext_ga_transfer(asset_id: u32, account_ptr: u32, account_len: u32, value: u64);
+        pub fn ext_log(log_ptr: u32, log_len: u32);
         pub fn ext_now();
         pub fn ext_random_seed();
         pub fn ext_get_storage(key_ptr: u32) -> u32;
