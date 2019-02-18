@@ -10,7 +10,7 @@ pub trait RuntimeABI {
     /// Transfer `asset_id`@`amount` from this contract's account to a given destination `account`
     fn generic_asset_transfer(account: AccountId, asset_id: AssetId, amount: Balance);
     /// Log an event message to the chain
-    fn log(message: &str);
+    fn log(message: &[u8]);
     /// Returns a data buffer to the caller, terminates immediatley.
     fn return_with(data: &[u8]) -> !;
 }
