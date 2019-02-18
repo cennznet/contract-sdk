@@ -6,9 +6,6 @@
 pub mod types {
     use primitives::H256;
 
-    /// A key for blockchain storage
-    pub struct StorageKey(pub [u8; 32]);
-
     // CENNZnet type mappings
     pub type AccountId = H256;
     pub type AssetId = u32;

@@ -1,5 +1,6 @@
 //!
-//! Contract bootsrap boiler plate
+//! Contract bootstrap boiler plate
+//! Should be imported into every Substrate contract
 //!
 #![no_std]
 #![feature(alloc_error_handler)]

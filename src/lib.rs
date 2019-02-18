@@ -12,6 +12,7 @@ mod index;
 pub use crate::index::asset;
 pub use crate::index::types;
 pub mod runtime;
+pub mod storage;
 pub mod util;
 
 /// Useful default imports for writing smart contracts
@@ -23,5 +24,10 @@ pub mod prelude {
     pub use crate::runtime::ExecutionContext;
     pub use crate::runtime::Runtime;
     pub use crate::runtime::RuntimeABI;
+    pub use crate::storage::Storage;
     pub use alloc::vec::Vec;
 }
+
+#[cfg(feature = "test")]
+#[macro_use]
+extern crate lazy_static;

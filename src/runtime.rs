@@ -9,12 +9,8 @@ use parity_codec::{Decode, Encode};
 pub trait RuntimeABI {
     /// Transfer `asset_id`@`amount` from this contract's account to a given destination `account`
     fn generic_asset_transfer(account: AccountId, asset_id: AssetId, amount: Balance);
-    /// Get some value stored at `key` from storage
-    fn get_storage(key: &StorageKey) -> Option<Vec<u8>>;
     /// Returns a data buffer to the caller, terminates immediatley.
     fn return_with(data: &[u8]) -> !;
-    /// Store some `value` at `key` in storage
-    fn set_storage(key: &StorageKey, value: Option<&[u8]>);
 }
 
 /// An interface over read-only runtime data
@@ -88,6 +84,7 @@ impl ExecutionContext for Context {
 }
 
 /// The default RuntimeAPI implementation
+#[derive(Default)]
 pub struct Runtime;
 
 impl RuntimeABI for Runtime {
@@ -104,35 +101,6 @@ impl RuntimeABI for Runtime {
         }
     }
 
-    /// Store value under key in storage
-    fn set_storage(key: &StorageKey, value: Option<&[u8]>) {
-        unsafe {
-            let mut value_ptr = 0;
-            let mut value_len = 0;
-            let value_non_null = if let Some(v) = value {
-                value_ptr = v.as_ptr() as u32;
-                value_len = v.len() as u32;
-                1
-            } else {
-                0
-            };
-
-            cabi::ext_set_storage(key.0.as_ptr() as u32, value_non_null, value_ptr, value_len);
-        }
-    }
-
-    /// Load stored value at `key`, returns `None` if not found
-    fn get_storage(key: &StorageKey) -> Option<Vec<u8>> {
-        const SUCCESS: u32 = 0;
-        unsafe {
-            let result = cabi::ext_get_storage(key.0.as_ptr() as u32);
-            if result != SUCCESS {
-                return None;
-            }
-            Some(read_scratch_buffer())
-        }
-    }
-
     /// Return the given `data` buffer to the caller
     fn return_with(data: &[u8]) -> ! {
         unsafe {
@@ -142,7 +110,7 @@ impl RuntimeABI for Runtime {
 }
 
 /// Read the contents of the scratch buffer
-fn read_scratch_buffer() -> Vec<u8> {
+pub(crate) fn read_scratch_buffer() -> Vec<u8> {
     unsafe {
         match cabi::ext_scratch_size() {
             len if len > 0 && len < isize::max_value() as u32 => {
@@ -156,7 +124,7 @@ fn read_scratch_buffer() -> Vec<u8> {
 }
 
 /// Bindings to the Substrate contract runtime
-mod cabi {
+pub(crate) mod cabi {
     extern "C" {
         pub fn ext_caller();
         pub fn ext_gas_left();
