@@ -1,17 +1,12 @@
 use crate::error::SDKError;
 use crate::storage::{Storage, StorageABI, StorageKey};
 use alloc::vec::Vec;
-use core::borrow::Borrow;
-use core::cmp::Eq;
-use core::hash::Hash;
+use core::{borrow::Borrow, cmp::Eq, hash::Hash};
 use hashbrown::hash_map::{HashMap, Iter};
-use parity_codec::{Codec, Decode, Encode};
+use parity_codec::{Codec, Decode, Encode, Input, Output};
 
 /// A map type for contract storage. Its keys types must derive parity Codec.
 ///
-/// Has a max capacity of 2**16 entries, although its practial limits may be reached sooner as the
-/// size of its encoded keys OR values cannot exceed 2GiB
-//
 // This is a thin wrapper on top of `hashbrown::HashMap` with some serialization support.
 // TODO: Currently we're eager loading the entire map from disk.
 //       can we implement a form of lazy loading? So the contract only pays for it uses.
@@ -68,37 +63,14 @@ where
         self.0.iter()
     }
 
-    /// Load a Map from encoded bytes
-    fn decode(buf: Vec<u8>) -> Result<Self, ()> {
-        let mut map = Self::new();
-        // Deserialize entries
-        let data: Vec<(K, V)> = Decode::decode(&mut &buf[..]).ok_or(())?;
-        // Rebuild map
-        for (k, v) in data {
-            map.insert(k, v);
-        }
-        Ok(map)
-    }
-
-    /// Encode a Map to bytes
-    /// Consumes the map leaving it unusable afterwards
-    fn encode(&mut self) -> Vec<u8> {
-        // A crude encoder where we serialize the keys and values
-        // using parity_codec
-        let mut data: Vec<(K, V)> = Vec::new();
-        for (k, v) in self.0.drain() {
-            data.push((k, v))
-        }
-        Encode::encode(&data)
-    }
-
     /// Load a map from persistent storage at `key`
     /// Returns a new map if no data was found
     /// !This will fail if the stored data has an invalid encoding.
     pub fn load_or_default(key: &StorageKey) -> Result<Self, SDKError> {
         let data = Storage::get_kv(key);
         if let Some(buf) = data {
-            Self::decode(buf).map_err(|_| SDKError::Decode("Failed decoding got invalid data"))
+            Decode::decode(&mut &buf[..])
+                .ok_or(SDKError::Decode("Failed decoding got invalid data"))
         } else {
             Ok(Self::new())
         }
@@ -107,8 +79,52 @@ where
     /// Write the map to persistent storage at `key`
     /// Consumes the map leaving it unusable afterwards.
     pub fn flush(&mut self, key: &StorageKey) {
-        let data = self.encode();
+        let data = Encode::encode(self);
         Storage::put_kv(key, Some(&data));
+    }
+}
+
+impl<K, V> Encode for Map<K, V>
+where
+    K: Eq + Hash + Codec,
+    V: Codec,
+{
+    /// Convert self to a slice and append it to the destination.
+    fn encode_to<T: Output>(&self, dest: &mut T) {
+        self.using_encoded(|buf| dest.write(buf));
+    }
+
+    /// Convert self to an owned vector.
+    fn encode(&self) -> Vec<u8> {
+        let mut data: Vec<(&K, &V)> = Vec::new();
+        for (k, v) in self.0.iter() {
+            data.push((k, v))
+        }
+        Encode::encode(&data)
+    }
+
+    /// Convert self to a slice and then invoke the given closure with it.
+    fn using_encoded<R, F: FnOnce(&[u8]) -> R>(&self, f: F) -> R {
+        f(&self.encode())
+    }
+}
+
+/// Trait that allows zero-copy read of value-references from slices in LE format.
+impl<K, V> Decode for Map<K, V>
+where
+    K: Eq + Hash + Codec,
+    V: Codec,
+{
+    /// Attempt to deserialise the value from input.
+    fn decode<I: Input>(value: &mut I) -> Option<Self> {
+        // Deserialize entries
+        let data: Vec<(K, V)> = Decode::decode(value)?;
+        // Rebuild map
+        let mut map = Self::new();
+        for (k, v) in data {
+            map.insert(k, v);
+        }
+        Some(map)
     }
 }
 
@@ -130,6 +146,7 @@ where
 mod tests {
     use super::Map;
     use alloc::vec::Vec;
+    use parity_codec::{Decode, Encode};
     use parity_codec_derive::*;
 
     #[derive(Encode, Decode, PartialEq, Debug, Clone)]
@@ -155,12 +172,32 @@ mod tests {
                 field2: vec![5, 6, 7, 8],
             },
         );
-        let original_map = map.clone();
-        let buf = map.encode(); // `map` is consumed here
-        let decoded_map: Map<u32, MockValue> = Map::decode(buf).unwrap();
+        let buf = Encode::encode(&map);
+        let decoded_map: Map<u32, MockValue> = Map::decode(&mut &buf[..]).unwrap();
 
-        assert_eq!(original_map[&1], decoded_map[&1]);
-        assert_eq!(original_map[&2], decoded_map[&2]);
+        assert_eq!(map[&1], decoded_map[&1]);
+        assert_eq!(map[&2], decoded_map[&2]);
+    }
+
+    #[test]
+    fn nested_maps_are_ok_too() {
+        let mut map: Map<u32, Map<u32, MockValue>> = Map::new();
+        let v = MockValue {
+            field1: 2u32,
+            field2: vec![1, 2, 3, 4],
+        };
+
+        let mut nested_map: Map<u32, MockValue> = Map::new();
+        nested_map.insert(1, v.clone());
+
+        map.insert(1, nested_map.clone());
+        map.insert(2, nested_map);
+
+        let buf = Encode::encode(&map);
+        let decoded_map: Map<u32, Map<u32, MockValue>> = Map::decode(&mut &buf[..]).unwrap();
+
+        assert_eq!(map[&1][&1], decoded_map[&1][&1]);
+        assert_eq!(map[&2][&1], decoded_map[&2][&1]);
     }
 
 }
