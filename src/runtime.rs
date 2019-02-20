@@ -48,7 +48,7 @@ impl ExecutionContext for Context {
         unsafe {
             cabi::ext_caller();
             let caller_buf = read_scratch_buffer();
-            AccountId::decode(&mut &caller_buf[..]).ok_or("Failed to load caller value")
+            Decode::decode(&mut &caller_buf[..]).ok_or("Failed to load caller value")
         }
     }
 
@@ -92,7 +92,7 @@ pub struct Runtime;
 impl RuntimeABI for Runtime {
     /// Transfer `asset_id`@`amount` from this contract's account to a given destination `account`
     fn generic_asset_transfer(account: AccountId, asset_id: AssetId, amount: Balance) {
-        let account_buf = AccountId::encode(&account);
+        let account_buf = Encode::encode(&account);
         unsafe {
             cabi::ext_ga_transfer(
                 asset_id,
@@ -103,12 +103,12 @@ impl RuntimeABI for Runtime {
         }
     }
 
-   /// Log an event to chain with the given `message`
-   fn log(message: &[u8]) {
-       unsafe {
-           cabi::ext_log(message.as_ptr() as u32, message.len() as u32);
-       }
-   }
+    /// Log an event to chain with the given `message`
+    fn log(message: &[u8]) {
+        unsafe {
+            cabi::ext_log(message.as_ptr() as u32, message.len() as u32);
+        }
+    }
 
     /// Return the given `data` buffer to the caller
     fn return_with(data: &[u8]) -> ! {

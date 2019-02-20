@@ -11,6 +11,8 @@ extern crate alloc;
 mod index;
 pub use crate::index::asset;
 pub use crate::index::types;
+pub mod error;
+pub mod map;
 pub mod runtime;
 pub mod storage;
 pub mod util;
@@ -27,7 +29,3 @@ pub mod prelude {
     pub use crate::storage::Storage;
     pub use alloc::vec::Vec;
 }
-
-#[cfg(feature = "test")]
-#[macro_use]
-extern crate lazy_static;
