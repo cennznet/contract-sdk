@@ -61,6 +61,15 @@ where
         self.inner.get(key)
     }
 
+    /// Return the value under `key` as mutable, None if not found
+    pub fn get_mut<Q>(&mut self, key: &Q) -> Option<&mut V>
+    where
+        K: Borrow<Q>,
+        Q: Hash + Eq,
+    {
+        self.inner.get_mut(key)
+    }
+
     /// Insert `value` under `key`
     pub fn insert(&mut self, key: K, value: V) {
         self.inner.insert(key, value);
@@ -171,6 +180,18 @@ where
     fn index(&self, index: &Q) -> &Self::Output {
         self.inner
             .get(index)
+            .expect("[contract_sdk::Map::index] Error: `index` is out of bounds")
+    }
+}
+
+impl<'a, K, Q: ?Sized, V> core::ops::IndexMut<&'a Q> for Map<K, V>
+where
+    K: Eq + Hash + Codec + Borrow<Q>,
+    Q: Eq + Hash,
+{
+    fn index_mut(&mut self, index: &Q) -> &mut Self::Output {
+        self.inner
+            .get_mut(index)
             .expect("[contract_sdk::Map::index] Error: `index` is out of bounds")
     }
 }
