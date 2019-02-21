@@ -12,7 +12,7 @@ mod index;
 pub use crate::index::asset;
 pub use crate::index::types;
 pub mod error;
-pub mod map;
+mod map;
 pub mod runtime;
 pub mod storage;
 pub mod util;

@@ -3,6 +3,9 @@
 //!
 use crate::runtime::{cabi, read_scratch_buffer};
 
+// Export map under storage namespace
+pub use crate::map::Map;
+
 use alloc::vec::Vec;
 use parity_codec::{Codec, Decode, Encode};
 use primitives::H256;
@@ -27,14 +30,11 @@ use primitives::H256;
 pub struct Storage;
 
 /// A key for blockchain storage, its inner value is a `[u8; 32]`
+#[cfg_attr(test, derive(Clone, Debug))]
+#[derive(Default)]
 pub struct StorageKey(pub H256);
 
 impl StorageKey {
-    /// Return a default storage key
-    pub fn default() -> Self {
-        StorageKey(H256::default())
-    }
-
     /// Return a zeroed-out storage key
     pub fn zero() -> Self {
         StorageKey(H256::zero())
@@ -58,14 +58,22 @@ pub trait StorageABI {
     fn put_kv(k: &StorageKey, v: Option<&[u8]>);
 }
 
-/// Convert `self` into a StorageKey
+/// Convert T into a StorageKey
 impl<T> From<T> for StorageKey
 where
     T: AsRef<[u8]>,
 {
     fn from(k: T) -> Self {
-        let key = H256::from_slice(k.as_ref());
-        StorageKey(key)
+        let k_len = k.as_ref().len();
+        // Pad or truncate keys to length 32
+        if k_len >= 32 {
+            let key = H256::from_slice(&k.as_ref()[..32]);
+            return StorageKey(key);
+        }
+
+        let mut buf: [u8; 32] = [0; 32];
+        buf[..k_len].clone_from_slice(&k.as_ref()[..k_len]);
+        StorageKey(H256::from_slice(&buf))
     }
 }
 
@@ -134,5 +142,24 @@ impl StorageABI for Storage {
             }
             Some(read_scratch_buffer())
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::StorageKey;
+
+    #[test]
+    fn from_short_storage_key_is_padded() {
+        let key = StorageKey::from("my key");
+        let target = b"my key\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
+        assert_eq!(StorageKey::from(target).0, key.0);
+    }
+
+    #[test]
+    fn from_long_storage_key_is_truncated() {
+        let key = StorageKey::from("myreallylongstoragekeythatislongerthan32bytes");
+        let target = &b"myreallylongstoragekeythatislongerthan32bytes"[..32];
+        assert_eq!(target, key.0.as_bytes());
     }
 }
