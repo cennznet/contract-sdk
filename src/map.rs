@@ -1,9 +1,8 @@
-use crate::error::SDKError;
-use crate::storage::{Storage, StorageABI, StorageKey};
+use crate::storage::{to_storage_key, Storage, StorageABI, StorageKey, STORAGE_KEY_ZERO};
 use alloc::vec::Vec;
 use core::{borrow::Borrow, cmp::Eq, hash::Hash};
 use hashbrown::hash_map::{HashMap, Iter};
-use parity_codec::{Codec, Decode, Encode, Input, Output};
+use parity_codec::{Codec, Decode, Encode, Input};
 
 /// A map type for contract storage. Its keys types must derive parity Codec.
 /// New isnstances are in-memory only and only persist upon calling `.flush()`.
@@ -27,18 +26,18 @@ where
     V: Codec,
 {
     /// Create a new Map at the given storage key
-    pub fn new<T: Into<StorageKey>>(storage_key: T) -> Self {
+    pub fn new(storage_key: &[u8]) -> Self {
         Map {
             inner: HashMap::new(),
-            storage_key: storage_key.into(),
+            storage_key: to_storage_key(storage_key),
         }
     }
 
-    /// Return a default map with
+    /// Return a default Map at the default storage key
     pub fn default() -> Self {
         Map {
             inner: HashMap::default(),
-            storage_key: StorageKey::default(),
+            storage_key: STORAGE_KEY_ZERO,
         }
     }
 
@@ -99,30 +98,32 @@ where
 
     /// Load a map from persistent storage at `key`
     /// Returns a new map if no data was found
-    /// !This will fail if the stored data has an invalid encoding.
-    pub fn load_or_create<T>(key: T) -> Result<Self, SDKError>
-    where
-        T: Into<StorageKey>,
-    {
-        let storage_key: StorageKey = key.into();
-        let data = Storage::get_kv(&storage_key);
-        if let Some(buf) = data {
-            Decode::decode(&mut &buf[..])
-                .map(|mut m: Self| {
-                    m.storage_key = storage_key; // Set the storage key
-                    m
-                })
-                .ok_or(SDKError::Decode("Failed decoding got invalid data"))
-        } else {
-            Ok(Self::new(storage_key))
-        }
+    /// !This will panic if the stored data has an invalid encoding.
+    pub fn load_or_create(key: &[u8]) -> Self {
+        let storage_key = to_storage_key(key);
+        let buf = Storage::get_kv(&storage_key).unwrap_or(vec![]);
+        Decode::decode(&mut &buf[..]).map(|mut m: Self| {
+            m.storage_key = storage_key; // Set the storage key, avoids needing to encode/decode it
+            m
+        }).unwrap_or(Self::new(key))
+    }
+
+    /// Load a map from persistent storage at `key`
+    /// !This will panic if the stored data has an invalid encoding.
+    pub fn load(key: &[u8]) -> Self {
+        let storage_key = to_storage_key(key);
+        let buf = Storage::get_kv(&storage_key).unwrap();
+        Decode::decode(&mut &buf[..]).map(|mut m: Self| {
+            m.storage_key = storage_key; // Set the storage key, avoids needing to encode/decode it
+            m
+        }).unwrap()
     }
 
     /// Write the map to persistent storage at `key`
-    /// Consumes the map leaving it unusable afterwards.
     pub fn flush(&mut self) {
+        let storage_key = to_storage_key(&self.storage_key);
         let data = Encode::encode(self);
-        Storage::put_kv(&self.storage_key, Some(&data));
+        Storage::put_kv(&storage_key, Some(&data));
     }
 }
 
@@ -131,11 +132,6 @@ where
     K: Eq + Hash + Codec,
     V: Codec,
 {
-    /// Convert self to a slice and append it to the destination.
-    fn encode_to<T: Output>(&self, dest: &mut T) {
-        self.using_encoded(|buf| dest.write(buf));
-    }
-
     /// Convert self to an owned vector.
     fn encode(&self) -> Vec<u8> {
         let mut data: Vec<(&K, &V)> = Vec::new();
@@ -143,11 +139,6 @@ where
             data.push((k, v))
         }
         Encode::encode(&data)
-    }
-
-    /// Convert self to a slice and then invoke the given closure with it.
-    fn using_encoded<R, F: FnOnce(&[u8]) -> R>(&self, f: F) -> R {
-        f(&self.encode())
     }
 }
 
@@ -199,7 +190,7 @@ where
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use super::{Map, StorageKey};
+    use super::{to_storage_key, Map};
     use alloc::vec::Vec;
     use parity_codec::{Decode, Encode};
     use parity_codec_derive::*;
@@ -270,7 +261,7 @@ mod tests {
         #[no_mangle]
         // Fill `dest_ptr` with encoded Map bytes
         fn ext_scratch_copy(dest_ptr: u32, _offset: u32, len: u32) {
-            let m: Map<u32, u32> = Map::new("_");
+            let m: Map<u32, u32> = Map::new(b"_");
             let mut buf = Encode::encode(&m);
             unsafe {
                 let mut _slice = core::slice::from_raw_parts_mut(dest_ptr as *mut u8, len as usize);
@@ -278,8 +269,8 @@ mod tests {
             }
         }
 
-        let map: Map<u32, u32> = Map::load_or_create("my map").unwrap();
-        assert_eq!(StorageKey::from("my map").0, map.storage_key.0);
+        let map: Map<u32, u32> = Map::load_or_create(b"my map");
+        assert_eq!(to_storage_key(b"my map"), map.storage_key);
     }
 
 }

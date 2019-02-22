@@ -8,7 +8,6 @@ pub use crate::map::Map;
 
 use alloc::vec::Vec;
 use parity_codec::{Codec, Decode, Encode};
-use primitives::H256;
 
 /// A simple map-like API over contract storage.
 ///
@@ -27,27 +26,11 @@ use primitives::H256;
 // it merley interfaces with the underlying storage.
 // See: https://github.com/rust-lang/rfcs/issues/997
 //
+pub const STORAGE_KEY_ZERO: [u8; 32] = [0; 32];
 pub struct Storage;
 
 /// A key for blockchain storage, its inner value is a `[u8; 32]`
-#[cfg_attr(test, derive(Clone, Debug))]
-#[derive(Default)]
-pub struct StorageKey(pub H256);
-
-impl StorageKey {
-    /// Return a zeroed-out storage key
-    pub fn zero() -> Self {
-        StorageKey(H256::zero())
-    }
-
-    pub fn as_bytes(&self) -> &[u8] {
-        self.0.as_bytes()
-    }
-
-    pub fn as_ptr(&self) -> *const u8 {
-        self.0.as_ptr()
-    }
-}
+pub type StorageKey = [u8; 32];
 
 /// A type which implements K-V storage on the external blockchain
 /// There are only two operations R/W
@@ -59,45 +42,40 @@ pub trait StorageABI {
 }
 
 /// Convert T into a StorageKey
-impl<T> From<T> for StorageKey
-where
-    T: AsRef<[u8]>,
-{
-    fn from(k: T) -> Self {
-        let k_len = k.as_ref().len();
-        // Pad or truncate keys to length 32
-        if k_len >= 32 {
-            let key = H256::from_slice(&k.as_ref()[..32]);
-            return StorageKey(key);
+pub fn to_storage_key(k: &[u8]) -> StorageKey {
+    let mut buf = STORAGE_KEY_ZERO;
+    // Pad or truncate keys to length 32
+    match k.len() {
+        l if (l > 32) => {
+            buf[..32].clone_from_slice(&k[..32]);
         }
+        _ => {
+            buf[..k.len()].clone_from_slice(&k[..k.len()]);
+        }
+    };
 
-        let mut buf: [u8; 32] = [0; 32];
-        buf[..k_len].clone_from_slice(&k.as_ref()[..k_len]);
-        StorageKey(H256::from_slice(&buf))
-    }
+    buf
 }
 
 /// High-level storage API
 impl Storage {
     /// Put a `value` into storage under `key`
-    pub fn put<K, V>(key: K, value: V)
+    pub fn put<K, V>(key: &[u8], value: V)
     where
-        K: AsRef<[u8]> + Sized,
         V: Codec,
     {
-        let k: StorageKey = key.into();
+        let k: StorageKey = to_storage_key(key);
         let v = Encode::encode(&value);
         <Self as StorageABI>::put_kv(&k, Some(&v));
     }
 
     /// Retreive a value from storage at `key`.
     /// Returning `None` if not found.
-    pub fn get<K, V>(key: &K) -> Option<V>
+    pub fn get<K, V>(key: &[u8]) -> Option<V>
     where
-        K: AsRef<[u8]> + Sized,
         V: Codec,
     {
-        let k: StorageKey = key.into();
+        let k: StorageKey = to_storage_key(key);
         if let Some(v) = <Self as StorageABI>::get_kv(&k) {
             return Decode::decode(&mut &v[..]);
         }
@@ -105,12 +83,9 @@ impl Storage {
     }
 
     /// Remove a key from storage by zero-ing out the value.
-    pub fn remove<K>(key: &K)
-    where
-        K: AsRef<[u8]> + Sized,
-    {
-        let k: StorageKey = key.into();
-        <Self as StorageABI>::put_kv(&k, Some(&StorageKey::zero().as_bytes()));
+    pub fn remove<K>(key: &[u8]) {
+        let k: StorageKey = to_storage_key(key);
+        <Self as StorageABI>::put_kv(&k, Some(&STORAGE_KEY_ZERO));
     }
 }
 
@@ -147,19 +122,20 @@ impl StorageABI for Storage {
 
 #[cfg(test)]
 mod tests {
-    use super::StorageKey;
+    use super::to_storage_key;
 
     #[test]
     fn from_short_storage_key_is_padded() {
-        let key = StorageKey::from("my key");
-        let target = b"my key\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
-        assert_eq!(StorageKey::from(target).0, key.0);
+        assert_eq!(
+            b"my key\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",
+            &to_storage_key("my key".as_bytes()),
+        );
     }
 
     #[test]
     fn from_long_storage_key_is_truncated() {
-        let key = StorageKey::from("myreallylongstoragekeythatislongerthan32bytes");
+        let key = &to_storage_key("myreallylongstoragekeythatislongerthan32bytes".as_bytes());
         let target = &b"myreallylongstoragekeythatislongerthan32bytes"[..32];
-        assert_eq!(target, key.0.as_bytes());
+        assert_eq!(target, key);
     }
 }
