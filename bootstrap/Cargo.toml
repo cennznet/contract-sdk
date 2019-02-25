@@ -1,5 +1,5 @@
 [package]
-name = "contract-bootstrap"
+name = "contract-bootstrap-env"
 version = "0.1.0"
 authors = ["developers@centrality.ai"]
 edition = "2018"
