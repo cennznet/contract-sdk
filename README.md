@@ -13,7 +13,7 @@ Run: `cargo build`
 Associated gas costs can be found [here](https://github.com/paritytech/substrate/blob/master/srml/contract/COMPLEXITY.md)  
 
 ## Usage
-```
+```rust
 #![no_std]
 use bootstrap; // Bootstraps contract env
 use contract_sdk::prelude::*;
