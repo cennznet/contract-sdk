@@ -15,6 +15,6 @@ pub mod types {
 
 /// Mappings to CENNZnet asset IDs
 pub mod asset {
-    pub const STAKING: u32 = 0;
-    pub const SPEND: u32 = 10;
+    pub const CENNZ: u32 = 16_000;
+    pub const CENTRAPAY: u32 = 16_001;
 }

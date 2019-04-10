@@ -102,10 +102,12 @@ where
     pub fn load_or_create(key: &[u8]) -> Self {
         let storage_key = to_storage_key(key);
         let buf = Storage::get_kv(&storage_key).unwrap_or(vec![]);
-        Decode::decode(&mut &buf[..]).map(|mut m: Self| {
-            m.storage_key = storage_key; // Set the storage key, avoids needing to encode/decode it
-            m
-        }).unwrap_or(Self::new(key))
+        Decode::decode(&mut &buf[..])
+            .map(|mut m: Self| {
+                m.storage_key = storage_key; // Set the storage key, avoids needing to encode/decode it
+                m
+            })
+            .unwrap_or(Self::new(key))
     }
 
     /// Load a map from persistent storage at `key`
@@ -113,10 +115,12 @@ where
     pub fn load(key: &[u8]) -> Self {
         let storage_key = to_storage_key(key);
         let buf = Storage::get_kv(&storage_key).unwrap();
-        Decode::decode(&mut &buf[..]).map(|mut m: Self| {
-            m.storage_key = storage_key; // Set the storage key, avoids needing to encode/decode it
-            m
-        }).unwrap()
+        Decode::decode(&mut &buf[..])
+            .map(|mut m: Self| {
+                m.storage_key = storage_key; // Set the storage key, avoids needing to encode/decode it
+                m
+            })
+            .unwrap()
     }
 
     /// Write the map to persistent storage at `key`

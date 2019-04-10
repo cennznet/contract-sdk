@@ -1,8 +1,8 @@
 //!
 //! Misc. helper functions
 //!
-use core::mem::transmute;
 use crate::runtime::{Context, ExecutionContext};
+use core::mem::transmute;
 
 /// Convert a `u32` into its byte representation
 pub fn u32_to_bytes(x: u32) -> [u8; 4] {
@@ -27,6 +27,8 @@ pub fn bytes_to_u64(x: [u8; 8]) -> u64 {
 // Get a one-time random u64, bound by `min` and/or `max`
 pub fn random_in_range(min: u64, max: u64) -> u64 {
     let seed = Context::random_seed();
-    let r = bytes_to_u64([seed[0], seed[1], seed[2], seed[3], seed[4], seed[5], seed[6], seed[7]]);
+    let r = bytes_to_u64([
+        seed[0], seed[1], seed[2], seed[3], seed[4], seed[5], seed[6], seed[7],
+    ]);
     min + (r % max)
 }
