@@ -11,9 +11,9 @@ pub trait RuntimeABI {
     fn generic_asset_transfer(account: AccountId, asset_id: AssetId, amount: Balance);
     /// Deposit an event on chain
     fn deposit_event(event: &[u8]);
-    /// Log an event message to the chain
-    fn log(message: &[u8]);
-    /// Returns a data buffer to the caller, terminates immediatley.
+    /// Log a UTF-8 message to the node stdout
+    fn log(message: &str);
+    /// Returns a data buffer to the caller, terminates immediately.
     fn return_with(data: &[u8]) -> !;
 }
 
@@ -105,17 +105,21 @@ impl RuntimeABI for Runtime {
         }
     }
 
-    /// Despoit an event on chain
+    /// Deposit an event on chain
     fn deposit_event(event: &[u8]) {
         unsafe {
             cabi::ext_deposit_event(event.as_ptr() as u32, event.len() as u32);
         }
     }
 
-    /// Log an event to chain with the given `message`
-    fn log(message: &[u8]) {
+    /// Log the given UTF-8 message to node stdout
+    /// Only supported on `--dev` chains, NOOP otherwise
+    fn log(message: &str) {
         unsafe {
-            cabi::ext_log(message.as_ptr() as u32, message.len() as u32);
+            cabi::ext_println(
+                message.as_bytes().as_ptr() as u32,
+                message.as_bytes().len() as u32,
+            );
         }
     }
 
@@ -147,7 +151,6 @@ pub(crate) mod cabi {
         pub fn ext_caller();
         pub fn ext_gas_left();
         pub fn ext_ga_transfer(asset_id: u32, account_ptr: u32, account_len: u32, value: u64);
-        pub fn ext_log(log_ptr: u32, log_len: u32);
         pub fn ext_now();
         pub fn ext_random_seed();
         pub fn ext_get_storage(key_ptr: u32) -> u32;
@@ -158,5 +161,6 @@ pub(crate) mod cabi {
         pub fn ext_scratch_copy(dest_ptr: u32, offset: u32, len: u32);
         pub fn ext_return(data_ptr: u32, data_len: u32) -> !;
         pub fn ext_deposit_event(data_ptr: u32, data_len: u32);
+        pub fn ext_println(message_ptr: u32, message_len: u32);
     }
 }
