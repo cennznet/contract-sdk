@@ -7,14 +7,15 @@ use parity_codec::{Decode, Encode};
 
 /// An interface for contract runtime functionality
 pub trait RuntimeABI {
-    /// Transfer `asset_id`@`amount` from this contract's account to a given destination `account`
-    fn generic_asset_transfer(account: AccountId, asset_id: AssetId, amount: Balance);
     /// Deposit an event on chain
     fn deposit_event(event: &[u8]);
     /// Log a UTF-8 message to the node stdout
     fn log(message: &str);
     /// Returns a data buffer to the caller, terminates immediately.
     fn return_with(data: &[u8]) -> !;
+    /// Call stored code at the given `callee` account with `gas` and `input` payload.
+    /// It also transfers some `value` to the account
+    fn call(callee: AccountId, gas: u64, value: Balance, input: &[u8]);
 }
 
 /// An interface over read-only runtime data
@@ -92,15 +93,21 @@ impl ExecutionContext for Context {
 pub struct Runtime;
 
 impl RuntimeABI for Runtime {
-    /// Transfer `asset_id`@`amount` from this contract's account to a given destination `account`
-    fn generic_asset_transfer(account: AccountId, asset_id: AssetId, amount: Balance) {
-        let account_buf = Encode::encode(&account);
+    /// Call code as the given `callee` account with initial `gas`, `input` payload,
+    /// and transfer some `value`
+    fn call(callee: AccountId, gas: u64, value: Balance, input: &[u8]) {
+        let callee_buf = Encode::encode(&callee);
+        let value_buf = Encode::encode(&value);
         unsafe {
-            cabi::ext_ga_transfer(
-                asset_id,
-                account_buf.as_ptr() as u32,
-                account_buf.len() as u32,
-                amount,
+            // TODO: expose exit code
+            let _ = cabi::ext_call(
+                callee_buf.as_ptr() as u32,
+                callee_buf.len() as u32,
+                gas,
+                value_buf.as_ptr() as u32,
+                value_buf.len() as u32,
+                input.as_ptr() as u32,
+                input.len() as u32,
             );
         }
     }
@@ -150,8 +157,16 @@ pub(crate) mod cabi {
     extern "C" {
         pub fn ext_caller();
         pub fn ext_gas_left();
-        pub fn ext_ga_transfer(asset_id: u32, account_ptr: u32, account_len: u32, value: u64);
         pub fn ext_now();
+        pub fn ext_call(
+            callee_ptr: u32,
+            callee_len: u32,
+            gas: u64,
+            value_ptr: u32,
+            value_len: u32,
+            input_data_ptr: u32,
+            input_data_len: u32,
+        ) -> u32;
         pub fn ext_random_seed();
         pub fn ext_get_storage(key_ptr: u32) -> u32;
         pub fn ext_set_storage(key_ptr: u32, value_non_null: u32, value_ptr: u32, value_len: u32);
