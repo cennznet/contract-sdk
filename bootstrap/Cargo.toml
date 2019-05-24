@@ -1,0 +1,11 @@
+[package]
+name = "bootstrap-env"
+version = "0.1.0"
+authors = ["Centrality Developers <developers@centrality.ai>"]
+edition = "2018"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+wee_alloc = { version = "0.4", default-features = false }
