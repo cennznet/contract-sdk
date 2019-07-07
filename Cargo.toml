@@ -1,18 +1,26 @@
 [package]
 name = "contract-sdk"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Centrality Developers <developers@centrality.ai>"]
 edition = "2018"
 
 [dependencies]
-parity-codec = { version = "3.0", default-features = false }
-primitives = { package = "primitive-types", version = "0.2", default-features = false, features = ["codec"] }
-hashbrown = { version = "0.1", features = ["nightly"] }
-
-[dev-dependencies]
-parity-codec-derive = { version = "3.0", default-features = false }
+ink_core = { git = "https://github.com/paritytech/ink", default-features = false }
+parity-codec = { version = "3.5.4", default-features = false, features = ["derive"] }
 
 [workspace]
 members = [
     "bootstrap"
+]
+
+[features]
+default = [
+    "std"
+]
+std = [
+    "ink_core/std",
+    "parity-codec/std",
+]
+test-env = [
+    "ink_core/test-env",
 ]

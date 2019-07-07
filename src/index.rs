@@ -4,10 +4,10 @@
 
 /// Mappings to CENNZnet runtime types
 pub mod types {
-    use primitives::H256;
-
     // CENNZnet type mappings
-    pub type AccountId = H256;
+    use ink_core::env::{ContractEnv, DefaultSrmlTypes, EnvTypes};
+
+    pub type AccountId = <ContractEnv<DefaultSrmlTypes> as EnvTypes>::AccountId;
     pub type AssetId = u32;
     pub type Balance = u128;
     pub type Timestamp = u64;

@@ -179,3 +179,28 @@ pub(crate) mod cabi {
         pub fn ext_println(message_ptr: u32, message_len: u32);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn call_account_id_type_works() {
+        // This mocks the contract VM ABI ext_call function
+        #[no_mangle]
+        fn ext_call(
+            _callee_ptr: u32,
+            _callee_len: u32,
+            _gas: u64,
+            _value_ptr: u32,
+            _value_len: u32,
+            _input_data_ptr: u32,
+            _input_data_len: u32,
+        ) -> u32 {
+            0
+        };
+
+        let alice = AccountId::from([0x0; 32]);
+        Runtime::call(alice, 0, 0, &[0u8]);
+    }
+}

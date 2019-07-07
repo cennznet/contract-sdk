@@ -3,9 +3,6 @@
 //!
 use crate::runtime::{cabi, read_scratch_buffer};
 
-// Export map under storage namespace
-pub use crate::map::Map;
-
 use alloc::vec::Vec;
 use parity_codec::{Codec, Decode, Encode};
 

@@ -11,7 +11,6 @@ extern crate alloc;
 mod index;
 pub use crate::index::asset;
 pub use crate::index::types;
-mod map;
 pub mod runtime;
 pub mod storage;
 pub mod util;
