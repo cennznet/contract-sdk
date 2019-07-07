@@ -15,6 +15,11 @@ pub mod runtime;
 pub mod storage;
 pub mod util;
 
+// Vendor ink versions
+pub use ink_core;
+pub use ink_model;
+pub use ink_lang;
+
 /// Useful default imports for writing smart contracts
 /// `use contract_sdk::prelude::*`
 pub mod prelude {

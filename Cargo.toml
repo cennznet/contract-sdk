@@ -5,7 +5,9 @@ authors = ["Centrality Developers <developers@centrality.ai>"]
 edition = "2018"
 
 [dependencies]
-ink_core = { git = "https://github.com/paritytech/ink", default-features = false }
+ink_core = { git = "https://github.com/paritytech/ink", default-features = false, rev = "9589899b5630c42870de24b0fdb9e67587531f70" }
+ink_model = { git = "https://github.com/paritytech/ink", default-features = false, rev = "9589899b5630c42870de24b0fdb9e67587531f70" }
+ink_lang = { git = "https://github.com/paritytech/ink", default-features = false, rev = "9589899b5630c42870de24b0fdb9e67587531f70" }
 parity-codec = { version = "3.5.4", default-features = false, features = ["derive"] }
 
 [workspace]
@@ -19,8 +21,12 @@ default = [
 ]
 std = [
     "ink_core/std",
+    "ink_model/std",
+    "ink_lang/std",
     "parity-codec/std",
 ]
 test-env = [
     "ink_core/test-env",
+    "ink_model/test-env",
+    "ink_lang/test-env",
 ]
