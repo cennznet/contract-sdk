@@ -1,12 +1,25 @@
 # Contract SDK
 A low level API over the CENNZnet contract runtime.  
 Contract developers should use this SDK to access behaviour and data from the underlying blockchain.  
-Project goals are to provide CENNZnet specific functionality and mappings.  
+Project goals are to provide CENNZnet specific functionality and mappings.
 It operates at a similar layer to Ink core.  
 
 ## Development
 Intended to compile with `#![no_std]`  
 Run: `cargo build`  
+
+# Use with Ink
+This crate comes with a vendored version of ink.  
+This is because ink is currently considered unstable, so we pin to a known working version.  
+This should be used instead of importing ink directly e.g.  
+```rust
+use contract_sdk::{ink_core, ink_model, ink_lang};
+```
+
+Build contract with ink json ABI  
+```
+cargo build --target=wasm32-unknown-unknown --features=generate-api-description
+```
 
 ## A Minimal Contract
 The smallest viable contract can be written with this SDK in ~5 lines of code:
@@ -43,7 +56,7 @@ pub extern "C" fn call() {
 
 ---
 # Contract 101
-Included here for posterity, most of this will be abstracted by ink.
+Included here for posterity, most of this will be superseded by ink.
 
 ## The Prelude
 Contracts execute in a sandbox. An ABI is given to provide them with access
